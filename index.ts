@@ -1,6 +1,8 @@
 import makeWASocket, { useMultiFileAuthState, DisconnectReason, WAMessage } from '@whiskeysockets/baileys';
 import * as admin from 'firebase-admin';
-import * as qrcode from 'qrcode-terminal';
+
+// Твой номер телефона для привязки (без плюса)
+const phoneNumber = "77057114243";
 
 // ==========================================
 // ИНИЦИАЛИЗАЦИЯ FIREBASE
@@ -347,7 +349,7 @@ async function handleMessages(sock: any, msg: WAMessage) {
 }
 
 // ==========================================
-// СТАРТ БОТА
+// СТАРТ БОТА (ПО КОДУ ПРИВЯЗКИ)
 // ==========================================
 let isConnecting = false;
 
@@ -355,27 +357,31 @@ async function startBot() {
     if (isConnecting) return;
     isConnecting = true;
 
-    // Новая чистая папка сессии v4
-    const { state, saveCreds } = await useMultiFileAuthState('baileys_auth_info_v4');
+    // Новая чистая папка сессии v6
+    const { state, saveCreds } = await useMultiFileAuthState('baileys_auth_info_v6');
 
     const sock = makeWASocket({
         auth: state,
-        // Обход ошибки 405: маскируемся под стабильный macOS Desktop
-        browser: ['macOS', 'Chrome', '125.0.0.0'],
+        browser: ['Mac OS', 'Chrome', '125.0.0.0'],
         syncFullHistory: false,
-        connectTimeoutMs: 60000,
-        defaultQueryTimeoutMs: 60000,
     });
 
-    sock.ev.on('connection.update', (update) => {
-        const { connection, lastDisconnect, qr } = update;
+    // Запрос кода привязки, если устройство еще не авторизовано
+    if (!sock.authState.creds.registered) {
+        setTimeout(async () => {
+            try {
+                const code = await sock.requestPairingCode(phoneNumber);
+                console.log('\n==============================================');
+                console.log(`🔑 КОД ДЛЯ ВХОДА В WHATSAPP: ${code}`);
+                console.log('==============================================\n');
+            } catch (err) {
+                console.error('❌ Ошибка генерации кода привязки:', err);
+            }
+        }, 4000);
+    }
 
-        if (qr) {
-            console.log('\n==============================================');
-            console.log('📱 СКАНИРУЙТЕ ЭТОТ QR-КОД В WHATSAPP:');
-            console.log('==============================================\n');
-            qrcode.generate(qr, { small: true });
-        }
+    sock.ev.on('connection.update', (update) => {
+        const { connection, lastDisconnect } = update;
 
         if (connection === 'close') {
             isConnecting = false;
@@ -414,4 +420,3 @@ async function startBot() {
 }
 
 startBot();
-                     
