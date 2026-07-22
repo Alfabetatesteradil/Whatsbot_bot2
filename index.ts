@@ -1,6 +1,5 @@
 import makeWASocket, { Browsers, useMultiFileAuthState, DisconnectReason, WAMessage } from '@whiskeysockets/baileys';
 import * as admin from 'firebase-admin';
-import * as qrcode from 'qrcode-terminal';
 
 // ==========================================
 // ИНИЦИАЛИЗАЦИЯ FIREBASE
@@ -8,12 +7,16 @@ import * as qrcode from 'qrcode-terminal';
 let serviceAccount: any;
 
 if (process.env.FIREBASE_KEY) {
-    serviceAccount = JSON.parse(process.env.FIREBASE_KEY);
+    try {
+        serviceAccount = JSON.parse(process.env.FIREBASE_KEY);
+    } catch (e) {
+        console.error('❌ Ошибка парсинга FIREBASE_KEY');
+    }
 } else {
     try {
         serviceAccount = require('./firebase-key.json');
     } catch (e) {
-        console.error('❌ Ошибка: Переменная FIREBASE_KEY не найдена!');
+        console.error('❌ Переменная FIREBASE_KEY не найдена!');
     }
 }
 
@@ -341,15 +344,21 @@ async function handleMessages(sock: any, msg: WAMessage) {
 }
 
 // ==========================================
-// СТАРТ БОТА WABAILEYS
+// СТАРТ БОТА WABAILEYS С ЗАЩИТОЙ ОТ ПЕТЛИ
 // ==========================================
+let isConnecting = false;
+
 async function startBot() {
+    if (isConnecting) return;
+    isConnecting = true;
+
     const { state, saveCreds } = await useMultiFileAuthState('baileys_auth_info');
 
     const sock = makeWASocket({
         auth: state,
         printQRInTerminal: false,
         browser: Browsers.ubuntu('Chrome'),
+        syncFullHistory: false
     });
 
     const phoneNumber = "77057114243";
@@ -359,23 +368,29 @@ async function startBot() {
             try {
                 const code = await sock.requestPairingCode(phoneNumber);
                 console.log('\n==================================================');
-                console.log(`🔑 ТВОЙ КОД ПОДКЛЮЧЕНИЯ (PAIRING CODE): ${code}`);
+                console.log(`🔑 ТВОЙ КОД ПОДКЛЮЧЕНИЯ: ${code}`);
                 console.log('==================================================\n');
             } catch (err) {
-                console.error('Ошибка получения кода подключения:', err);
+                console.log('Запрос кода... Ожидайте стабилизации сети.');
             }
-        }, 3000);
+        }, 6000);
     }
 
     sock.ev.on('connection.update', (update) => {
         const { connection, lastDisconnect } = update;
 
         if (connection === 'close') {
-            const shouldReconnect = (lastDisconnect?.error as any)?.output?.statusCode !== DisconnectReason.loggedOut;
-            console.log('Соединение закрыто. Переподключение...', shouldReconnect);
-            if (shouldReconnect) startBot();
+            isConnecting = false;
+            const statusCode = (lastDisconnect?.error as any)?.output?.statusCode;
+            const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+            
+            console.log(`Соединение закрыто (Код: ${statusCode}). Переподключение: ${shouldReconnect}`);
+            if (shouldReconnect) {
+                setTimeout(() => startBot(), 5000); // Пауза 5 сек перед повтором
+            }
         } else if (connection === 'open') {
-            console.log('✅ Бот успешно подключен к WhatsApp!');
+            isConnecting = false;
+            console.log('✅ БОТ УСПЕШНО ПОДКЛЮЧЕН К WHATSAPP!');
         }
     });
 
@@ -393,4 +408,4 @@ async function startBot() {
 }
 
 startBot();
-        
+                
