@@ -122,6 +122,8 @@ async function handleMessages(sock: any, msg: WAMessage) {
     const sender = msg.key.participant || msg.key.remoteJid!;
     const pushName = msg.pushName || 'Игрок';
 
+    console.log(`📩 Получено сообщение: "${text}" от ${pushName}`);
+
     if (textLower === '!пинг') {
         const start = Date.now();
         await usersCollection.doc('ping_test').get();
@@ -353,7 +355,8 @@ async function startBot() {
     if (isConnecting) return;
     isConnecting = true;
 
-    const { state, saveCreds } = await useMultiFileAuthState('baileys_auth_info');
+    // Сбросили сессию на _v3, чтобы очистить старые ошибки
+    const { state, saveCreds } = await useMultiFileAuthState('baileys_auth_info_v3');
 
     const sock = makeWASocket({
         auth: state,
@@ -364,7 +367,7 @@ async function startBot() {
     sock.ev.on('connection.update', (update) => {
         const { connection, lastDisconnect, qr } = update;
 
-        // Генерация QR-кода при получении
+        // Отрисовка QR-кода при получении
         if (qr) {
             console.log('\n==============================================');
             console.log('📱 СКАНИРУЙТЕ ЭТОТ QR-КОД В WHATSAPP:');
@@ -394,7 +397,15 @@ async function startBot() {
     sock.ev.on('messages.upsert', async (m) => {
         if (m.type === 'notify') {
             for (const msg of m.messages) {
-                if (!msg.key.fromMe) {
+                const text = msg.message?.conversation || msg.message?.extendedTextMessage?.text || '';
+
+                if (msg.key.fromMe) {
+                    // Разрешаем отвечать себе (в личку), если сообщение начинается с "!"
+                    if (text.startsWith('!')) {
+                        await handleMessages(sock, msg);
+                    }
+                } else {
+                    // От других пользователей обрабатываем все сообщения
                     await handleMessages(sock, msg);
                 }
             }
@@ -403,4 +414,4 @@ async function startBot() {
 }
 
 startBot();
-            
+    
