@@ -394,5 +394,6 @@ async function startBot() {
     });
 }
 
-startBot();
+startBot(const phoneNumber = process.env.BOT_PHONE_NUMBER || "77000000000";
+                    );
                   
