@@ -344,7 +344,7 @@ async function handleMessages(sock: any, msg: WAMessage) {
 }
 
 // ==========================================
-// СТАРТ БОТА WABAILEYS С ЗАЩИТОЙ ОТ ПЕТЛИ
+// СТАРТ БОТА ЧЕРЕЗ QR-КОД
 // ==========================================
 let isConnecting = false;
 
@@ -352,29 +352,15 @@ async function startBot() {
     if (isConnecting) return;
     isConnecting = true;
 
+    // Включаем вывод QR-кода в консоль
     const { state, saveCreds } = await useMultiFileAuthState('baileys_auth_info');
 
     const sock = makeWASocket({
         auth: state,
-        printQRInTerminal: false,
+        printQRInTerminal: true, // 👈 Включен QR-код прямо в терминале
         browser: Browsers.ubuntu('Chrome'),
         syncFullHistory: false
     });
-
-    const phoneNumber = "77057114243";
-
-    if (!sock.authState.creds.registered) {
-        setTimeout(async () => {
-            try {
-                const code = await sock.requestPairingCode(phoneNumber);
-                console.log('\n==================================================');
-                console.log(`🔑 ТВОЙ КОД ПОДКЛЮЧЕНИЯ: ${code}`);
-                console.log('==================================================\n');
-            } catch (err) {
-                console.log('Запрос кода... Ожидайте стабилизации сети.');
-            }
-        }, 6000);
-    }
 
     sock.ev.on('connection.update', (update) => {
         const { connection, lastDisconnect } = update;
@@ -384,13 +370,15 @@ async function startBot() {
             const statusCode = (lastDisconnect?.error as any)?.output?.statusCode;
             const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
             
-            console.log(`Соединение закрыто (Код: ${statusCode}). Переподключение: ${shouldReconnect}`);
+            console.log(`Соединение закрыто (Код: ${statusCode}). Переподключение...`);
             if (shouldReconnect) {
-                setTimeout(() => startBot(), 5000); // Пауза 5 сек перед повтором
+                setTimeout(() => startBot(), 3000);
             }
         } else if (connection === 'open') {
             isConnecting = false;
-            console.log('✅ БОТ УСПЕШНО ПОДКЛЮЧЕН К WHATSAPP!');
+            console.log('==============================================');
+            console.log('✅ БОТ УСПЕШНО ПОДКЛЮЧЕН И ГОТОВ К РАБОТЕ!');
+            console.log('==============================================');
         }
     });
 
@@ -408,4 +396,4 @@ async function startBot() {
 }
 
 startBot();
-                
+                                
