@@ -1,0 +1,4 @@
+node_modules/
+dist/
+firebase-key.json
+baileys_auth_info/
