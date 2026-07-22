@@ -1,4 +1,4 @@
-import makeWASocket, { Browsers, useMultiFileAuthState, DisconnectReason, WAMessage } from '@whiskeysockets/baileys';
+import makeWASocket, { useMultiFileAuthState, DisconnectReason, WAMessage } from '@whiskeysockets/baileys';
 import * as admin from 'firebase-admin';
 import * as qrcode from 'qrcode-terminal';
 
@@ -355,19 +355,21 @@ async function startBot() {
     if (isConnecting) return;
     isConnecting = true;
 
-    // Сбросили сессию на _v3, чтобы очистить старые ошибки
-    const { state, saveCreds } = await useMultiFileAuthState('baileys_auth_info_v3');
+    // Новая чистая папка сессии v4
+    const { state, saveCreds } = await useMultiFileAuthState('baileys_auth_info_v4');
 
     const sock = makeWASocket({
         auth: state,
-        browser: Browsers.ubuntu('Chrome'),
-        syncFullHistory: false
+        // Обход ошибки 405: маскируемся под стабильный macOS Desktop
+        browser: ['macOS', 'Chrome', '125.0.0.0'],
+        syncFullHistory: false,
+        connectTimeoutMs: 60000,
+        defaultQueryTimeoutMs: 60000,
     });
 
     sock.ev.on('connection.update', (update) => {
         const { connection, lastDisconnect, qr } = update;
 
-        // Отрисовка QR-кода при получении
         if (qr) {
             console.log('\n==============================================');
             console.log('📱 СКАНИРУЙТЕ ЭТОТ QR-КОД В WHATSAPP:');
@@ -400,12 +402,10 @@ async function startBot() {
                 const text = msg.message?.conversation || msg.message?.extendedTextMessage?.text || '';
 
                 if (msg.key.fromMe) {
-                    // Разрешаем отвечать себе (в личку), если сообщение начинается с "!"
                     if (text.startsWith('!')) {
                         await handleMessages(sock, msg);
                     }
                 } else {
-                    // От других пользователей обрабатываем все сообщения
                     await handleMessages(sock, msg);
                 }
             }
@@ -414,4 +414,4 @@ async function startBot() {
 }
 
 startBot();
-    
+                     
