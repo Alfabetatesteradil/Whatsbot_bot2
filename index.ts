@@ -1,35 +1,17 @@
 import makeWASocket, { useMultiFileAuthState, DisconnectReason, WAMessage } from '@whiskeysockets/baileys';
-import * as admin from 'firebase-admin';
 
 // Твой номер телефона для привязки (без плюса)
 const phoneNumber = "77057114243";
 
-// ==========================================
-// ИНИЦИАЛИЗАЦИЯ FIREBASE
-// ==========================================
-let serviceAccount: any;
-
-if (process.env.FIREBASE_KEY) {
-    try {
-        serviceAccount = JSON.parse(process.env.FIREBASE_KEY);
-    } catch (e) {
-        console.error('❌ Ошибка парсинга FIREBASE_KEY');
-    }
-} else {
-    try {
-        serviceAccount = require('./firebase-key.json');
-    } catch (e) {
-        console.error('❌ Переменная FIREBASE_KEY не найдена!');
-    }
-}
-
-if (serviceAccount && !admin.apps.length) {
-    admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
-    });
-}
-
-const db = admin.firestore();
+// Временная заглушка для базы данных, чтобы код не падал без ключей Firebase в облаке
+const db: any = { 
+    collection: () => ({ 
+        doc: () => ({ 
+            get: async () => ({ exists: false, data: () => ({ rankIndex: 0, xp: 0, rebirths: 0 }) }), 
+            set: async () => {} 
+        }) 
+    }) 
+};
 const usersCollection = db.collection('profiles');
 
 const RANKS = [
@@ -130,7 +112,7 @@ async function handleMessages(sock: any, msg: WAMessage) {
         const start = Date.now();
         await usersCollection.doc('ping_test').get();
         const latency = Date.now() - start;
-        await sock.sendMessage(chatId, { text: `🏓 *Понг!*\n⚡ Задержка отклика базы: *${latency} мс*` });
+        await sock.sendMessage(chatId, { text: `🏓 *Понг!*\n⚡ Задержка отклика: *${latency} мс*` });
         return;
     }
 
@@ -141,7 +123,7 @@ async function handleMessages(sock: any, msg: WAMessage) {
 ⚙️ *Системное и Профиль:*
 • *!ранг* (или *!ранг я*) — Ранг, XP и перерождения
 • *!перерождение* (или *!ребирт*) — Сброс Алмаза (+1 перерождение)
-• *!пинг* — Проверка скорости базы
+• *!пинг* — Проверка скорости
 • *!какиграть [название]* — Инструкция к игре
 
 🎯 *Список игр:*
@@ -357,7 +339,6 @@ async function startBot() {
     if (isConnecting) return;
     isConnecting = true;
 
-    // Новая чистая папка сессии v6
     const { state, saveCreds } = await useMultiFileAuthState('baileys_auth_info_v6');
 
     const sock = makeWASocket({
@@ -366,7 +347,6 @@ async function startBot() {
         syncFullHistory: false,
     });
 
-    // Запрос кода привязки, если устройство еще не авторизовано
     if (!sock.authState.creds.registered) {
         setTimeout(async () => {
             try {
@@ -420,3 +400,4 @@ async function startBot() {
 }
 
 startBot();
+    
