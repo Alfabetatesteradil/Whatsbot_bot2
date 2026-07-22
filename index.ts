@@ -1,9 +1,9 @@
-import makeWASocket, { Browsers, useMultiFileAuthState, DisconnectReason } from '@whiskeysockets/baileys';
+import makeWASocket, { Browsers, useMultiFileAuthState, DisconnectReason, WAMessage } from '@whiskeysockets/baileys';
 import * as admin from 'firebase-admin';
 import * as qrcode from 'qrcode-terminal';
 
 // ==========================================
-// ИНИЦИАЛИЗАЦИЯ FIREBASE (Из переменной окружения Koyeb)
+// ИНИЦИАЛИЗАЦИЯ FIREBASE (Из переменной окружения Koyeb/Railway)
 // ==========================================
 let serviceAccount: any;
 
@@ -141,8 +141,7 @@ async function handleMessages(sock: any, msg: WAMessage) {
 2. 🤠 *Дуэль* (+20 XP) ➔ *!дуэль* | *!принять*
 3. 🎰 *Рулетка* (+50 XP) ➔ *!рулетка* (или *!риск*)
 4. ✊ *КМБ* (+30 XP) ➔ *!рпк камень/ножницы/бумага*
-5. 🧠 *Викторина* (+5 XP) ➔ *!викторина* | *!ответ [слово]*
-6. 💀 *ВЫ ЛОШАРЫ В ПАПКАХ Я ПОКАПАЛСЯ АХАХХАХАХ* `;
+5. 🧠 *Викторина* (+5 XP) ➔ *!викторина* | *!ответ [слово]*`;
 
         await sock.sendMessage(chatId, { text: menuText });
         return;
@@ -346,20 +345,32 @@ async function handleMessages(sock: any, msg: WAMessage) {
 // ==========================================
 async function startBot() {
     const { state, saveCreds } = await useMultiFileAuthState('baileys_auth_info');
+
     const sock = makeWASocket({
         auth: state,
-        printQRInTerminal: false
+        printQRInTerminal: false,
+        browser: Browsers.ubuntu('Chrome'), // <-- Маскировка от блокировок IP
     });
 
-    sock.ev.on('connection.update', (update) => {
-        const { connection, lastDisconnect, qr } = update;
+    // Укажи свой номер телефона без плюса и пробелов (например: 77071234567)
+    const phoneNumber = process.env.BOT_PHONE_NUMBER || "77000000000";
 
-        if (qr) {
-            console.log('\n==================================================');
-            console.log('📌 ОТСКАНИРУЙТЕ ЭТОТ QR-КОД ЧЕРЕЗ WHATSAPP:');
-            console.log('==================================================\n');
-            qrcode.generate(qr, { small: false });
-        }
+    // Если бот ещё не авторизован, генерируем Pairing Code
+    if (!sock.authState.creds.registered) {
+        setTimeout(async () => {
+            try {
+                const code = await sock.requestPairingCode(phoneNumber);
+                console.log('\n==================================================');
+                console.log(`🔑 ТВУЙ КОД ПОДКЛЮЧЕНИЯ (PAIRING CODE): ${code}`);
+                console.log('==================================================\n');
+            } catch (err) {
+                console.error('Ошибка получения кода подключения:', err);
+            }
+        }, 3000);
+    }
+
+    sock.ev.on('connection.update', (update) => {
+        const { connection, lastDisconnect } = update;
 
         if (connection === 'close') {
             const shouldReconnect = (lastDisconnect?.error as any)?.output?.statusCode !== DisconnectReason.loggedOut;
@@ -384,4 +395,4 @@ async function startBot() {
 }
 
 startBot();
-    
+                  
