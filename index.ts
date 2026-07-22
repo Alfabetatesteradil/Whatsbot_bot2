@@ -1,5 +1,4 @@
-import makeWASocket, { Browsers, useMultiFileAuthState } from '@whiskeysockets/baileys';
-import makeWASocket, { useMultiFileAuthState, DisconnectReason, WAMessage } from '@whiskeysockets/baileys';
+import makeWASocket, { Browsers, useMultiFileAuthState, DisconnectReason } from '@whiskeysockets/baileys';
 import * as admin from 'firebase-admin';
 import * as qrcode from 'qrcode-terminal';
 
@@ -142,7 +141,8 @@ async function handleMessages(sock: any, msg: WAMessage) {
 2. 🤠 *Дуэль* (+20 XP) ➔ *!дуэль* | *!принять*
 3. 🎰 *Рулетка* (+50 XP) ➔ *!рулетка* (или *!риск*)
 4. ✊ *КМБ* (+30 XP) ➔ *!рпк камень/ножницы/бумага*
-5. 🧠 *Викторина* (+5 XP) ➔ *!викторина* | *!ответ [слово]*`;
+5. 🧠 *Викторина* (+5 XP) ➔ *!викторина* | *!ответ [слово]*
+6. 💀 *ВЫ ЛОШАРЫ В ПАПКАХ Я ПОКАПАЛСЯ АХАХХАХАХ* `;
 
         await sock.sendMessage(chatId, { text: menuText });
         return;
@@ -358,7 +358,7 @@ async function startBot() {
             console.log('\n==================================================');
             console.log('📌 ОТСКАНИРУЙТЕ ЭТОТ QR-КОД ЧЕРЕЗ WHATSAPP:');
             console.log('==================================================\n');
-            qrcode.generate(qr, { small: true });
+            qrcode.generate(qr, { small: false });
         }
 
         if (connection === 'close') {
