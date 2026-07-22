@@ -1,3 +1,4 @@
+import makeWASocket, { Browsers, useMultiFileAuthState } from '@whiskeysockets/baileys';
 import makeWASocket, { useMultiFileAuthState, DisconnectReason, WAMessage } from '@whiskeysockets/baileys';
 import * as admin from 'firebase-admin';
 import * as qrcode from 'qrcode-terminal';
