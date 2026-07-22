@@ -1,5 +1,6 @@
 import makeWASocket, { Browsers, useMultiFileAuthState, DisconnectReason, WAMessage } from '@whiskeysockets/baileys';
 import * as admin from 'firebase-admin';
+import * as qrcode from 'qrcode-terminal';
 
 // ==========================================
 // ИНИЦИАЛИЗАЦИЯ FIREBASE
@@ -344,7 +345,7 @@ async function handleMessages(sock: any, msg: WAMessage) {
 }
 
 // ==========================================
-// СТАРТ БОТА ЧЕРЕЗ QR-КОД
+// СТАРТ БОТА
 // ==========================================
 let isConnecting = false;
 
@@ -352,18 +353,24 @@ async function startBot() {
     if (isConnecting) return;
     isConnecting = true;
 
-    // Включаем вывод QR-кода в консоль
     const { state, saveCreds } = await useMultiFileAuthState('baileys_auth_info');
 
     const sock = makeWASocket({
         auth: state,
-        printQRInTerminal: true, // 👈 Включен QR-код прямо в терминале
         browser: Browsers.ubuntu('Chrome'),
         syncFullHistory: false
     });
 
     sock.ev.on('connection.update', (update) => {
-        const { connection, lastDisconnect } = update;
+        const { connection, lastDisconnect, qr } = update;
+
+        // Генерация QR-кода при получении
+        if (qr) {
+            console.log('\n==============================================');
+            console.log('📱 СКАНИРУЙТЕ ЭТОТ QR-КОД В WHATSAPP:');
+            console.log('==============================================\n');
+            qrcode.generate(qr, { small: true });
+        }
 
         if (connection === 'close') {
             isConnecting = false;
@@ -396,4 +403,4 @@ async function startBot() {
 }
 
 startBot();
-                                
+            
