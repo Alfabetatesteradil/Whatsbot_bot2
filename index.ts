@@ -3,7 +3,7 @@ import * as admin from 'firebase-admin';
 import * as qrcode from 'qrcode-terminal';
 
 // ==========================================
-// ИНИЦИАЛИЗАЦИЯ FIREBASE (Из переменной окружения Koyeb/Railway)
+// ИНИЦИАЛИЗАЦИЯ FIREBASE
 // ==========================================
 let serviceAccount: any;
 
@@ -349,19 +349,17 @@ async function startBot() {
     const sock = makeWASocket({
         auth: state,
         printQRInTerminal: false,
-        browser: Browsers.ubuntu('Chrome'), // <-- Маскировка от блокировок IP
+        browser: Browsers.ubuntu('Chrome'),
     });
 
-    // Укажи свой номер телефона без плюса и пробелов (например: 77071234567)
-    const phoneNumber = process.env.BOT_PHONE_NUMBER || "77000000000";
+    const phoneNumber = "77057114243";
 
-    // Если бот ещё не авторизован, генерируем Pairing Code
     if (!sock.authState.creds.registered) {
         setTimeout(async () => {
             try {
                 const code = await sock.requestPairingCode(phoneNumber);
                 console.log('\n==================================================');
-                console.log(`🔑 ТВУЙ КОД ПОДКЛЮЧЕНИЯ (PAIRING CODE): ${code}`);
+                console.log(`🔑 ТВОЙ КОД ПОДКЛЮЧЕНИЯ (PAIRING CODE): ${code}`);
                 console.log('==================================================\n');
             } catch (err) {
                 console.error('Ошибка получения кода подключения:', err);
@@ -394,6 +392,5 @@ async function startBot() {
     });
 }
 
-startBot(const phoneNumber = process.env.BOT_PHONE_NUMBER || "77000000000";
-                    );
-                  
+startBot();
+        
